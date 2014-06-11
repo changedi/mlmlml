@@ -90,6 +90,35 @@ def createTree(dataSet, labels):
     uniqueVals = set(featValues)
     for value in uniqueVals:
         subLabels = labels[:]
-        myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet, bestFeat, value), sbuLabels)
+        myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet, bestFeat, value),
+                                                  subLabels)
     return myTree
+
+
+## classification for an existing decision tree
+def classify(inputTree, featLabels, testVec):
+    firstStr = inputTree.keys()[0]
+    secondDict = inputTree[firstStr]
+    #translate label string to index
+    featIndex = featLabels.index(firstStr)
+    for key in secondDict.keys():
+        if testVec[featIndex] == key:
+            if type(secondDict[key]).__name__ == 'dict':
+                classLabel = classify(secondDict[key], featLabels, testVec)
+            else:
+                classLabel = secondDict[key]
+    return classLabel
+
+
+##persist the tree
+def storeTree(inputTree,filename):
+    import pickle
+    fw = open(filename,'w')
+    pickle.dump(inputTree,fw)
+    fw.close()
+
+def grabTree(filename):
+    import pickle
+    fr = open(filename)
+    return pickle.load(fr)
 
