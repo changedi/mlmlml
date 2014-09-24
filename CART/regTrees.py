@@ -57,5 +57,51 @@ def chooseBestSplit(dataSet, leafType=regLeaf, errType=regErr, ops=(1,4)):
         return None, leafType(dataSet)
     return bestIndex, bestValue
 
+# regression tree-pruning functions
+def isTree(obj):
+    return (type(obj).__name__=='dict')
 
+def getMean(tree):
+    if isTree(tree['right']): tree['right'] = getMean(tree['right'])
+    if isTree(tree['left']): tree['left'] = getMean(tree['left'])
+    return (tree['left']+tree['right'])/2
+
+def prune(tree, testData):
+    if shape(testData)[0]==0: return getMean(tree)
+    if (isTree(tree['right']) or isTree(tree['left'])):
+        lSet, rSet = binSplitDataSet(testData, tree['spInd'], tree['spVal'])
+    if isTree(tree['left']): tree['left']=prune(tree['left'],lSet)
+    if isTree(tree['right']): tree['right']=prune(tree['right'],rSet)
+    if not isTree(tree['left']) and not isTree(tree['right']):
+        lSet, rSet = binSplitDataSet(testData, tree['spInd'], tree['spVal'])
+        errorNoMerge = sum(power(lSet[:,-1] - tree['left'],2)) + sum(power(rSet[:,-1]- tree['right'],2))
+        treeMean = (tree['left']+tree['right'])/2.0
+        errorMerge= sum(power(testData[:,-1]-treeMean,2))
+        if errorMerge < errorNoMerge:
+            print "merging"
+            return treeMean
+        else:
+            return tree
+    else:
+        return tree
+
+# Leaf-generation function for model trees
+def linearSolve(dataSet):
+    m,n = shape(dataSet)
+    X = mat(ones((m,n))); Y = mat(ones((m,1)))
+    X[:,1:n] = dataSet[:,0:n-1]; Y = dataSet[:,-1]
+    xTx = X.T*X
+    if linalg.det(xTx) == 0.0:
+        raise NameError('This matrix is singular, cannot do inverse')
+    ws = xTx.I * (X.T * Y)
+    return ws,X,Y
+
+def modelLeaf(dataSet):
+    ws,X,Y = linearSolve(dataSet)
+    return ws
+
+def modelErr(dataSet):
+    ws,X,Y = linearSolve(dataSet)
+    yHat = X * ws
+    return sum(power(Y-yHat,2))
 
